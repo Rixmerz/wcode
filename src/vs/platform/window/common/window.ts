@@ -205,6 +205,11 @@ export interface IWindowSettings {
 	readonly newWindowDimensions: 'default' | 'inherit' | 'offset' | 'maximized' | 'fullscreen';
 	readonly nativeTabs: boolean;
 	readonly nativeFullScreen: boolean;
+	// WCode: Add transparency settings
+	readonly transparency?: {
+		readonly enabled: boolean;
+		readonly opacity: number;
+	};
 	readonly enableMenuBarMnemonics: boolean;
 	readonly closeWhenEmpty: boolean;
 	readonly clickThroughInactive: boolean;

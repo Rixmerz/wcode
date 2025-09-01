@@ -1,7 +1,7 @@
 {
-	"nameShort": "Code - OSS",
-	"nameLong": "Code - OSS",
-	"applicationName": "code-oss",
+	"nameShort": "WCode",
+	"nameLong": "WCode - Enhanced Code Editor",
+	"applicationName": "wcode",
 	"dataFolderName": ".vscode-oss",
 	"win32MutexName": "vscodeoss",
 	"licenseName": "MIT",

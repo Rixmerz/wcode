@@ -143,6 +143,9 @@ export function defaultBrowserWindowOptions(accessor: ServicesAccessor, windowSt
 		y: windowState.y,
 		width: windowState.width,
 		height: windowState.height,
+		// WCode: Add transparency support
+		transparent: windowSettings?.transparency?.enabled ?? false,
+		opacity: windowSettings?.transparency?.opacity ?? 1.0,
 		webPreferences: {
 			...webPreferences,
 			enableWebSQL: false,

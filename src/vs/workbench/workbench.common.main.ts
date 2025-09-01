@@ -422,5 +422,8 @@ import './contrib/dropOrPasteInto/browser/dropOrPasteInto.contribution.js';
 // Edit Telemetry
 import './contrib/editTelemetry/browser/editTelemetry.contribution.js';
 
+// WCode - Enhanced customization features
+import './contrib/wcode/browser/wcode.contribution.js';
+
 
 //#endregion
