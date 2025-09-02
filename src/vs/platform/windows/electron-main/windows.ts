@@ -133,6 +133,9 @@ export function defaultBrowserWindowOptions(accessor: ServicesAccessor, windowSt
 
 	const windowSettings = configurationService.getValue<IWindowSettings | undefined>('window');
 
+	// WCode: Read transparency settings using flat configuration keys
+	const transparencyEnabled = configurationService.getValue<boolean>('window.transparency.enabled') ?? false;
+
 	const options: electron.BrowserWindowConstructorOptions & { experimentalDarkMode: boolean; accentColor?: boolean | string } = {
 		backgroundColor: themeMainService.getBackgroundColor(),
 		minWidth: WindowMinimumSize.WIDTH,
@@ -143,9 +146,8 @@ export function defaultBrowserWindowOptions(accessor: ServicesAccessor, windowSt
 		y: windowState.y,
 		width: windowState.width,
 		height: windowState.height,
-		// WCode: Add transparency support
-		transparent: windowSettings?.transparency?.enabled ?? false,
-		opacity: windowSettings?.transparency?.opacity ?? 1.0,
+		// WCode: Add transparency support (opacity is applied after window creation)
+		transparent: transparencyEnabled,
 		webPreferences: {
 			...webPreferences,
 			enableWebSQL: false,

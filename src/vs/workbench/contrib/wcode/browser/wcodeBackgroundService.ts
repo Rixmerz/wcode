@@ -9,6 +9,7 @@ import { IWorkbenchContribution } from '../../../common/contributions.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { registerSingleton, InstantiationType } from '../../../../platform/instantiation/common/extensions.js';
 import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
+import { mainWindow } from '../../../../base/browser/window.js';
 
 export const IWCodeBackgroundService = createDecorator<IWCodeBackgroundService>('wcodeBackgroundService');
 
@@ -21,20 +22,22 @@ export interface IWCodeBackgroundService {
 export class WCodeBackgroundService extends Disposable implements IWCodeBackgroundService, IWorkbenchContribution {
 	readonly _serviceBrand: undefined;
 
-	private backgroundElement: HTMLElement | null = null;
+	private editorStyleElement: HTMLStyleElement | null = null;
+	private globalBackgroundElement: HTMLElement | null = null;
 
 	constructor(
 		@IConfigurationService private readonly configurationService: IConfigurationService,
 		@IThemeService private readonly themeService: IThemeService
 	) {
 		super();
+		console.log('WCode: WCodeBackgroundService instantiated'); // Debug log
 		this.init();
 	}
 
 	private init(): void {
 		// Listen for configuration changes
 		this._register(this.configurationService.onDidChangeConfiguration(e => {
-			if (e.affectsConfiguration('wcode.background')) {
+			if (e.affectsConfiguration('wcode.background.global') || e.affectsConfiguration('wcode.background.editor')) {
 				this.applyBackgroundSettings();
 			}
 		}));
@@ -49,61 +52,93 @@ export class WCodeBackgroundService extends Disposable implements IWCodeBackgrou
 	}
 
 	applyBackgroundSettings(): void {
-		const config = this.configurationService.getValue<any>('wcode.background');
+		const globalConfig = this.configurationService.getValue<any>('wcode.background.global');
+		const editorConfig = this.configurationService.getValue<any>('wcode.background.editor');
 
-		if (!config?.enabled || !config?.image) {
-			this.removeBackground();
-			return;
+		// Apply global background
+		if (globalConfig?.enabled && globalConfig?.image) {
+			this.createGlobalBackgroundElement();
+			this.updateGlobalBackgroundStyles(globalConfig);
+		} else {
+			this.removeGlobalBackground();
 		}
 
-		this.createBackgroundElement();
-		this.updateBackgroundStyles(config);
+		// Apply editor background
+		if (editorConfig?.enabled && editorConfig?.image) {
+			this.createEditorStyleElement();
+			this.updateEditorBackgroundStyles(editorConfig);
+		} else {
+			this.removeEditorBackground();
+		}
 	}
 
-	private createBackgroundElement(): void {
-		if (this.backgroundElement) {
+	// Global background methods
+	private createGlobalBackgroundElement(): void {
+		if (this.globalBackgroundElement) {
 			return;
 		}
 
 		// Find the workbench container
-		const workbench = document.querySelector('.monaco-workbench');
+		const workbench = mainWindow.document.querySelector('.monaco-workbench');
 		if (!workbench) {
 			return;
 		}
 
-		// Create background element
-		this.backgroundElement = document.createElement('div');
-		this.backgroundElement.className = 'wcode-background';
-		this.backgroundElement.style.cssText = `
+		// Make workbench background transparent to show our custom background
+		(workbench as HTMLElement).style.background = 'transparent';
+
+		// Create global background element
+		this.globalBackgroundElement = mainWindow.document.createElement('div');
+		this.globalBackgroundElement.className = 'wcode-global-background';
+		this.globalBackgroundElement.style.cssText = `
 			position: fixed;
 			top: 0;
 			left: 0;
 			width: 100%;
 			height: 100%;
-			z-index: -1;
+			z-index: 0;
 			pointer-events: none;
 		`;
 
-		workbench.appendChild(this.backgroundElement);
+		workbench.appendChild(this.globalBackgroundElement);
 	}
 
-	private updateBackgroundStyles(config: any): void {
-		if (!this.backgroundElement) {
+	// Editor background methods
+	private createEditorStyleElement(): void {
+		if (this.editorStyleElement) {
+			return;
+		}
+
+		this.editorStyleElement = mainWindow.document.createElement('style');
+		this.editorStyleElement.id = 'wcode-editor-background';
+		mainWindow.document.head.appendChild(this.editorStyleElement);
+	}
+
+	private updateGlobalBackgroundStyles(config: any): void {
+		if (!this.globalBackgroundElement) {
 			return;
 		}
 
 		const opacity = config.opacity || 0.1;
 		const size = config.size || 'cover';
 		const position = config.position || 'center';
-		const image = config.image;
+		let image = config.image;
 
-		this.backgroundElement.style.cssText = `
+		// WCode: Convert local file paths to vscode-file:// scheme
+		if (image && !image.startsWith('http') && !image.startsWith('vscode-file://') && !image.startsWith('file://')) {
+			// If it's an absolute path, convert to vscode-file:// URL
+			if (image.startsWith('/') || image.match(/^[A-Za-z]:\\/)) {
+				image = `vscode-file://vscode-app${image}`;
+			}
+		}
+
+		this.globalBackgroundElement.style.cssText = `
 			position: fixed;
 			top: 0;
 			left: 0;
 			width: 100%;
 			height: 100%;
-			z-index: -1;
+			z-index: 0;
 			pointer-events: none;
 			background-image: url('${image}');
 			background-size: ${size};
@@ -113,15 +148,92 @@ export class WCodeBackgroundService extends Disposable implements IWCodeBackgrou
 		`;
 	}
 
-	removeBackground(): void {
-		if (this.backgroundElement) {
-			this.backgroundElement.remove();
-			this.backgroundElement = null;
+	private updateEditorBackgroundStyles(config: any): void {
+		if (!this.editorStyleElement) {
+			return;
+		}
+
+		const opacity = config.opacity || 0.1;
+		const size = config.size || 'cover';
+		const position = config.position || 'center';
+		let image = config.image;
+
+		// WCode: Convert local file paths to vscode-file:// scheme
+		if (image && !image.startsWith('http') && !image.startsWith('vscode-file://') && !image.startsWith('file://')) {
+			// If it's an absolute path, convert to vscode-file:// URL
+			if (image.startsWith('/') || image.match(/^[A-Za-z]:\\/)) {
+				image = `vscode-file://vscode-app${image}`;
+			}
+		}
+
+		// CSS to add background only to editor areas using pseudo-elements
+		const css = `
+			/* WCode Editor Background Overlay */
+			.monaco-editor .monaco-editor-background::before {
+				content: '';
+				position: absolute;
+				top: 0;
+				left: 0;
+				right: 0;
+				bottom: 0;
+				background-image: url('${image}');
+				background-size: ${size};
+				background-position: ${position};
+				background-repeat: no-repeat;
+				opacity: ${opacity};
+				pointer-events: none;
+				z-index: -1;
+			}
+
+			/* Alternative selector for different editor layouts */
+			.monaco-editor .view-lines::before {
+				content: '';
+				position: absolute;
+				top: 0;
+				left: 0;
+				right: 0;
+				bottom: 0;
+				background-image: url('${image}');
+				background-size: ${size};
+				background-position: ${position};
+				background-repeat: no-repeat;
+				opacity: ${opacity};
+				pointer-events: none;
+				z-index: -1;
+			}
+
+			/* Ensure editor background is transparent to show our overlay */
+			.monaco-editor .monaco-editor-background {
+				background-color: transparent !important;
+			}
+		`;
+
+		this.editorStyleElement.textContent = css;
+	}
+
+	removeGlobalBackground(): void {
+		if (this.globalBackgroundElement) {
+			this.globalBackgroundElement.remove();
+			this.globalBackgroundElement = null;
 		}
 	}
 
+	removeEditorBackground(): void {
+		if (this.editorStyleElement) {
+			this.editorStyleElement.remove();
+			this.editorStyleElement = null;
+		}
+	}
+
+	// Interface compatibility method
+	removeBackground(): void {
+		this.removeGlobalBackground();
+		this.removeEditorBackground();
+	}
+
 	override dispose(): void {
-		this.removeBackground();
+		this.removeGlobalBackground();
+		this.removeEditorBackground();
 		super.dispose();
 	}
 }
