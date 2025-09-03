@@ -673,14 +673,15 @@ export class CodeWindow extends BaseWindow implements ICodeWindow {
 			this._id = this._win.id;
 			this.setWin(this._win, options);
 
-			// WCode: Apply window opacity after creation if transparency is enabled
-			const transparencyEnabled = this.configurationService.getValue<boolean>('wcode.transparency.enabled') ?? false;
-			const opacity = this.configurationService.getValue<number>('wcode.transparency.opacity') ?? 1.0;
-			if (transparencyEnabled && this._win) {
-				// Ensure opacity is within valid bounds (0.1 to 1.0)
-				const clampedOpacity = Math.max(0.1, Math.min(1.0, opacity));
-				this._win.setOpacity(clampedOpacity);
-			}
+			// WCode: Apply initial window opacity
+			this.applyTransparencySettings();
+
+			// WCode: Listen for transparency configuration changes
+			this._register(this.configurationService.onDidChangeConfiguration(e => {
+				if (e.affectsConfiguration('wcode.transparency')) {
+					this.applyTransparencySettings();
+				}
+			}));
 
 			// Apply some state after window creation
 			this.applyState(this.windowState, hasMultipleDisplays);
@@ -1629,6 +1630,25 @@ export class CodeWindow extends BaseWindow implements ICodeWindow {
 
 	matches(webContents: electron.WebContents): boolean {
 		return this._win?.webContents.id === webContents.id;
+	}
+
+	// WCode: Apply transparency settings to the window
+	private applyTransparencySettings(): void {
+		if (!this._win) {
+			return;
+		}
+
+		const transparencyEnabled = this.configurationService.getValue<boolean>('wcode.transparency.enabled') ?? false;
+		const opacity = this.configurationService.getValue<number>('wcode.transparency.opacity') ?? 1.0;
+
+		if (transparencyEnabled) {
+			// Ensure opacity is within valid bounds (0.1 to 1.0)
+			const clampedOpacity = Math.max(0.1, Math.min(1.0, opacity));
+			this._win.setOpacity(clampedOpacity);
+		} else {
+			// Reset to full opacity when transparency is disabled
+			this._win.setOpacity(1.0);
+		}
 	}
 
 	override dispose(): void {
