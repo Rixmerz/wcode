@@ -19,6 +19,22 @@ configurationRegistry.registerConfiguration({
 	title: localize('wcodeConfigurationTitle', "WCode"),
 	type: 'object',
 	properties: {
+		// Window transparency settings
+		'wcode.transparency.enabled': {
+			type: 'boolean',
+			default: false,
+			description: localize('wcode.transparency.enabled', "Enable window transparency."),
+			scope: ConfigurationScope.APPLICATION
+		},
+		'wcode.transparency.opacity': {
+			type: 'number',
+			default: 1.0,
+			minimum: 0.1,
+			maximum: 1.0,
+			description: localize('wcode.transparency.opacity', "Set the window opacity level."),
+			scope: ConfigurationScope.APPLICATION
+		},
+
 		// Global window background (behind all UI elements)
 		'wcode.background.global.enabled': {
 			type: 'boolean',
@@ -94,27 +110,7 @@ configurationRegistry.registerConfiguration({
 	}
 });
 
-// Also register these settings under the window configuration for transparency
-configurationRegistry.registerConfiguration({
-	id: 'window',
-	type: 'object',
-	properties: {
-		'window.transparency.enabled': {
-			type: 'boolean',
-			default: false,
-			description: localize('window.transparency.enabled', "Enable window transparency."),
-			scope: ConfigurationScope.APPLICATION
-		},
-		'window.transparency.opacity': {
-			type: 'number',
-			default: 1.0,
-			minimum: 0.1,
-			maximum: 1.0,
-			description: localize('window.transparency.opacity', "Set the window opacity level."),
-			scope: ConfigurationScope.APPLICATION
-		}
-	}
-});
+
 
 // Register WCode services as workbench contributions
 const workbenchRegistry = Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench);

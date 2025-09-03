@@ -204,7 +204,8 @@ export class Toggle extends Widget {
 	}
 
 	set checked(newIsChecked: boolean) {
-		this._checked = newIsChecked;
+		// Ensure we have a proper boolean value to prevent object conversion errors
+		this._checked = Boolean(newIsChecked);
 
 		this.domNode.setAttribute('aria-checked', String(this._checked));
 		this.domNode.classList.toggle('checked', this._checked);
@@ -331,7 +332,8 @@ export class Checkbox extends BaseCheckbox {
 	}
 
 	set checked(newIsChecked: boolean) {
-		this.checkbox.checked = newIsChecked;
+		// Ensure we have a proper boolean value to prevent object conversion errors
+		this.checkbox.checked = Boolean(newIsChecked);
 		this.applyStyles();
 	}
 

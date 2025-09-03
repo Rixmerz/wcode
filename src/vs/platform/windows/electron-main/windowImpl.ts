@@ -674,8 +674,8 @@ export class CodeWindow extends BaseWindow implements ICodeWindow {
 			this.setWin(this._win, options);
 
 			// WCode: Apply window opacity after creation if transparency is enabled
-			const transparencyEnabled = this.configurationService.getValue<boolean>('window.transparency.enabled') ?? false;
-			const opacity = this.configurationService.getValue<number>('window.transparency.opacity') ?? 1.0;
+			const transparencyEnabled = this.configurationService.getValue<boolean>('wcode.transparency.enabled') ?? false;
+			const opacity = this.configurationService.getValue<number>('wcode.transparency.opacity') ?? 1.0;
 			if (transparencyEnabled && this._win) {
 				// Ensure opacity is within valid bounds (0.1 to 1.0)
 				const clampedOpacity = Math.max(0.1, Math.min(1.0, opacity));

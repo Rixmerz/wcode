@@ -134,7 +134,7 @@ export function defaultBrowserWindowOptions(accessor: ServicesAccessor, windowSt
 	const windowSettings = configurationService.getValue<IWindowSettings | undefined>('window');
 
 	// WCode: Read transparency settings using flat configuration keys
-	const transparencyEnabled = configurationService.getValue<boolean>('window.transparency.enabled') ?? false;
+	const transparencyEnabled = configurationService.getValue<boolean>('wcode.transparency.enabled') ?? false;
 
 	const options: electron.BrowserWindowConstructorOptions & { experimentalDarkMode: boolean; accentColor?: boolean | string } = {
 		backgroundColor: themeMainService.getBackgroundColor(),

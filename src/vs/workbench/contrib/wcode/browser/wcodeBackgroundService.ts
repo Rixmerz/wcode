@@ -37,7 +37,9 @@ export class WCodeBackgroundService extends Disposable implements IWCodeBackgrou
 	private init(): void {
 		// Listen for configuration changes
 		this._register(this.configurationService.onDidChangeConfiguration(e => {
-			if (e.affectsConfiguration('wcode.background.global') || e.affectsConfiguration('wcode.background.editor')) {
+			if (e.affectsConfiguration('wcode.background.global') ||
+				e.affectsConfiguration('wcode.background.editor') ||
+				e.affectsConfiguration('wcode.transparency')) {
 				this.applyBackgroundSettings();
 			}
 		}));
@@ -52,21 +54,45 @@ export class WCodeBackgroundService extends Disposable implements IWCodeBackgrou
 	}
 
 	applyBackgroundSettings(): void {
-		const globalConfig = this.configurationService.getValue<any>('wcode.background.global');
-		const editorConfig = this.configurationService.getValue<any>('wcode.background.editor');
+		// Read individual configuration values to avoid object conversion issues
+		const globalEnabled = this.configurationService.getValue<boolean>('wcode.background.global.enabled') ?? false;
+		const globalImage = this.configurationService.getValue<string>('wcode.background.global.image') ?? '';
+		const globalOpacity = this.configurationService.getValue<number>('wcode.background.global.opacity') ?? 0.1;
+		const globalSize = this.configurationService.getValue<string>('wcode.background.global.size') ?? 'cover';
+		const globalPosition = this.configurationService.getValue<string>('wcode.background.global.position') ?? 'center';
+
+		const editorEnabled = this.configurationService.getValue<boolean>('wcode.background.editor.enabled') ?? false;
+		const editorImage = this.configurationService.getValue<string>('wcode.background.editor.image') ?? '';
+		const editorOpacity = this.configurationService.getValue<number>('wcode.background.editor.opacity') ?? 0.1;
+		const editorSize = this.configurationService.getValue<string>('wcode.background.editor.size') ?? 'cover';
+		const editorPosition = this.configurationService.getValue<string>('wcode.background.editor.position') ?? 'center';
+
 
 		// Apply global background
-		if (globalConfig?.enabled && globalConfig?.image) {
+		if (globalEnabled && globalImage) {
 			this.createGlobalBackgroundElement();
-			this.updateGlobalBackgroundStyles(globalConfig);
+			this.updateGlobalBackgroundStyles({
+				enabled: globalEnabled,
+				image: globalImage,
+				opacity: globalOpacity,
+				size: globalSize,
+				position: globalPosition
+			});
 		} else {
 			this.removeGlobalBackground();
 		}
 
 		// Apply editor background
-		if (editorConfig?.enabled && editorConfig?.image) {
+		if (editorEnabled && editorImage) {
 			this.createEditorStyleElement();
-			this.updateEditorBackgroundStyles(editorConfig);
+			this.updateEditorBackgroundStyles({
+				enabled: editorEnabled,
+				image: editorImage,
+				opacity: editorOpacity,
+				size: editorSize,
+				position: editorPosition,
+				parallax: false
+			});
 		} else {
 			this.removeEditorBackground();
 		}
@@ -156,6 +182,7 @@ export class WCodeBackgroundService extends Disposable implements IWCodeBackgrou
 		const opacity = config.opacity || 0.1;
 		const size = config.size || 'cover';
 		const position = config.position || 'center';
+		const parallax = false; // Parallax removed: always use traditional behavior
 		let image = config.image;
 
 		// WCode: Convert local file paths to vscode-file:// scheme
@@ -166,47 +193,61 @@ export class WCodeBackgroundService extends Disposable implements IWCodeBackgrou
 			}
 		}
 
-		// CSS to add background only to editor areas using pseudo-elements
-		const css = `
-			/* WCode Editor Background Overlay */
-			.monaco-editor .monaco-editor-background::before {
-				content: '';
-				position: absolute;
-				top: 0;
-				left: 0;
-				right: 0;
-				bottom: 0;
-				background-image: url('${image}');
-				background-size: ${size};
-				background-position: ${position};
-				background-repeat: no-repeat;
-				opacity: ${opacity};
-				pointer-events: none;
-				z-index: -1;
-			}
+		// CSS to add background only to editor areas
+		let css = '';
 
-			/* Alternative selector for different editor layouts */
-			.monaco-editor .view-lines::before {
-				content: '';
-				position: absolute;
-				top: 0;
-				left: 0;
-				right: 0;
-				bottom: 0;
-				background-image: url('${image}');
-				background-size: ${size};
-				background-position: ${position};
-				background-repeat: no-repeat;
-				opacity: ${opacity};
-				pointer-events: none;
-				z-index: -1;
-			}
+		if (parallax) {
+			// Parallax mode: fixed to viewport, clipped to editor viewport
+			css = `
+				/* Ensure editor viewport is a positioning context */
+				.monaco-editor .overflow-guard { position: relative; }
 
-			/* Ensure editor background is transparent to show our overlay */
-			.monaco-editor .monaco-editor-background {
-				background-color: transparent !important;
-			}
-		`;
+				/* WCode Editor Background Overlay - Parallax (fixed to viewport) */
+				.monaco-editor .overflow-guard::before {
+					content: '';
+					position: absolute;
+					top: 0;
+					left: 0;
+					right: 0;
+					bottom: 0;
+					background-image: url('${image}');
+					background-size: ${size};
+					background-position: ${position};
+					background-repeat: no-repeat;
+					background-attachment: fixed; /* fixed to viewport */
+					opacity: ${opacity};
+					pointer-events: none;
+				}
+
+				/* Make editor background transparent to show overlay */
+				.monaco-editor .monaco-editor-background { background-color: transparent !important; }
+			`;
+		} else {
+			// Traditional mode: pinned to editor viewport (no scaling with content height)
+			css = `
+				/* Ensure editor viewport is a positioning context */
+				.monaco-editor .overflow-guard { position: relative; }
+
+				/* WCode Editor Background Overlay - Traditional (pinned to editor viewport) */
+				.monaco-editor .overflow-guard::before {
+					content: '';
+					position: absolute;
+					top: 0;
+					left: 0;
+					right: 0;
+					bottom: 0;
+					background-image: url('${image}');
+					background-size: ${size};
+					background-position: ${position};
+					background-repeat: no-repeat;
+					opacity: ${opacity};
+					pointer-events: none;
+				}
+
+				/* Make editor background transparent to show overlay */
+				.monaco-editor .monaco-editor-background { background-color: transparent !important; }
+			`;
+		}
 
 		this.editorStyleElement.textContent = css;
 	}
