@@ -12,6 +12,14 @@ import { promises as fs } from 'fs';
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const rootDir = path.resolve(__dirname, '..', '..');
 
+// Apply custom WCode icons before build
+try {
+	const wcodeIcons = require('./wcode-icons-fixed');
+	await wcodeIcons.applyCustomIcons();
+} catch (error: any) {
+	console.log('⚠️  Could not apply custom icons:', error.message);
+}
+
 function runProcess(command: string, args: ReadonlyArray<string> = []) {
 	return new Promise<void>((resolve, reject) => {
 		const child = spawn(command, args, { cwd: rootDir, stdio: 'inherit', env: process.env, shell: process.platform === 'win32' });
